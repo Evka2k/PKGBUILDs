@@ -67,9 +67,10 @@ prepare() {
   git apply ../0004-arm64-dts-rockchip-enable-usb3-nodes-on-rk3328-rock6.patch
 
   # Helios64
+  rm arch/arm64/boot/dts/rockchip/rk3399-kobol-helios64.dts
   git apply ../add-board-helios64.patch
-  git apply ../add-board-helios64-makefile.patch
-  git apply ../board-helios64-remove-overclock.patch
+#  git apply ../add-board-helios64-makefile.patch
+#  git apply ../board-helios64-remove-overclock.patch
   git apply ../general-add-dwc3-xhci-usb-trb-quirk.patch
   git apply ../rk3399-enable-dwc3-xhci-usb-trb-quirk.patch
   git apply ../board-helios64-enable-spi-nor.patch
