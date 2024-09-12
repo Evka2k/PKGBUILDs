@@ -1,0 +1,291 @@
+commit da1d3d2751624d333136dba10a956eedccee203c
+Author: Evaldas Palaima <evaldas.palaima@gmail.com>
+Date:   Thu Sep 12 11:02:02 2024 +0300
+
+    Kobiol Helios64 patch
+    
+     * fan names
+     * additional push buttons and leds
+     * gpio charger
+     * backup battery voltage
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3399-kobol-helios64.dts b/arch/arm64/boot/dts/rockchip/rk3399-kobol-helios64.dts
+index 9586bb12a..0682d0e24 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3399-kobol-helios64.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3399-kobol-helios64.dts
+@@ -18,6 +18,19 @@ / {
+ 	model = "Kobol Helios64";
+ 	compatible = "kobol,helios64", "rockchip,rk3399";
+ 
++	adc-keys {
++		compatible = "adc-keys";
++		io-channels = <&saradc 1>;
++		io-channel-names = "buttons";
++		keyup-threshold-microvolt = <1800000>;
++		poll-interval = <100>;
++	};
++
++	beeper: beeper {
++		compatible = "gpio-beeper";
++		gpios = <&gpio4 RK_PD3 GPIO_ACTIVE_HIGH>;
++	};
++
+ 	aliases {
+ 		ethernet0 = &gmac;
+ 		mmc0 = &sdmmc;
+@@ -55,14 +68,14 @@ clkin_gmac: external-gmac-clock {
+ 		#clock-cells = <0>;
+ 	};
+ 
+-	fan1 {
++	fan1: p7-fan {
+ 		/* fan connected to P7 */
+ 		compatible = "pwm-fan";
+ 		pwms = <&pwm0 0 40000 0>;
+ 		cooling-levels = <0 80 170 255>;
+ 	};
+ 
+-	fan2 {
++	fan2: p6-fan {
+ 		/* fan connected to P6 */
+ 		compatible = "pwm-fan";
+ 		pwms = <&pwm1 0 40000 0>;
+@@ -228,6 +241,109 @@ vcc12v_dcin_bkup: vcc12v-dcin-bkup {
+ 		regulator-max-microvolt = <12000000>;
+ 		vin-supply = <&vcc12v_dcin>;
+ 	};
++
++	gpio-charger {
++		compatible = "gpio-charger";
++		charger-type = "mains";
++		gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
++		charge-status-gpios = <&gpio2 RK_PD3 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&ac_present_ap>, <&charger_status>;
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++		autorepeat;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pwrbtn>, <&user1btn>, <&wake_on_lan>;
++
++		power {
++			debounce-interval = <100>;
++			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
++			label = "Power";
++			wakeup-source;
++		};
++
++		user1-button {
++			debounce-interval = <100>;
++			gpios = <&gpio0 RK_PA3 GPIO_ACTIVE_LOW>;
++			label = "User Button 1";
++			wakeup-source;
++		};
++	};
++
++	io_leds: io-gpio-leds {
++		status = "okay";
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&network_act>, <&usb3_act>,
++			<&sata_act>, <&sata_err_led>;
++
++		network	{
++			label = "helios64:blue:net";
++			gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "netdev";
++			default-state = "off";
++		};
++
++		sata	{
++			label = "helios64:blue:hdd-status";
++			gpios = <&gpio4 RK_PD4 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "disk-activity";
++			default-state = "off";
++		};
++
++		sata_err1 {
++			label = "helios64:red:ata1-err";
++			gpios = <&gpio2 RK_PA2 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++
++		sata_err2 {
++			label = "helios64:red:ata2-err";
++			gpios = <&gpio2 RK_PA3 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++
++		sata_err3 {
++			label = "helios64:red:ata3-err";
++			gpios = <&gpio2 RK_PA4 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++
++		sata_err4 {
++			label = "helios64:red:ata4-err";
++			gpios = <&gpio2 RK_PA5 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++
++		sata_err5 {
++			label = "helios64:red:ata5-err";
++			gpios = <&gpio2 RK_PA6 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++
++		usb3 {
++			label = "helios64:blue:usb3";
++			gpios = <&gpio0 RK_PB3 GPIO_ACTIVE_HIGH>;
++			trigger-sources = <&int_hub_port1>,
++					<&int_hub_port2>,
++					<&int_hub_port3>;
++			linux,default-trigger = "usbport";
++			default-state = "off";
++		};
++	};
++
++	pwmleds {
++		compatible = "pwm-leds";
++		status = "okay";
++
++		power-led {
++			label = "helios64:blue:power-status";
++			pwms = <&pwm3 0 2000000000 0>;
++			max-brightness = <255>;
++		};
++	};
+ };
+ 
+ /*
+@@ -353,6 +469,18 @@ regulator-state-mem {
+ 				};
+ 			};
+ 
++			vcc1v8_s3: LDO_REG3 {
++				regulator-name = "vcc1v8_s3";
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-state-mem {
++					regulator-on-in-suspend;
++					regulator-suspend-microvolt = <1800000>;
++				};
++			};
++
+ 			vcc_sdio_s0: LDO_REG4 {
+ 				regulator-name = "vcc_sdio_s0";
+ 				regulator-always-on;
+@@ -437,6 +565,26 @@ &pcie0 {
+ };
+ 
+ &pinctrl {
++	buttons {
++		pwrbtn: pwrbtn {
++			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++
++		user1btn: usr1btn {
++			rockchip,pins = <0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
++	charger {
++		ac_present_ap: ac-present-ap {
++			rockchip,pins = <0 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		charger_status: charger-status {
++			rockchip,pins = <2 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
+ 	gmac {
+ 		gphy_reset: gphy-reset {
+ 			rockchip,pins = <3 RK_PB7 RK_FUNC_GPIO &pcfg_output_low>;
+@@ -444,6 +592,21 @@ gphy_reset: gphy-reset {
+ 	};
+ 
+ 	leds {
++		network_act: network-act {
++			rockchip,pins =
++				<0 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>;
++		};
++
++		usb3_act: usb3-act {
++			rockchip,pins =
++				<0 RK_PB3 RK_FUNC_GPIO &pcfg_pull_down>;
++		};
++
++		sata_act: sata-act {
++			rockchip,pins =
++				<4 RK_PD4 RK_FUNC_GPIO &pcfg_pull_down>;
++		};
++
+ 		sys_grn_led_on: sys-grn-led-on {
+ 			rockchip,pins = <0 RK_PB4 RK_FUNC_GPIO &pcfg_pull_down>;
+ 		};
+@@ -451,6 +614,27 @@ sys_grn_led_on: sys-grn-led-on {
+ 		sys_red_led_on: sys-red-led-on {
+ 			rockchip,pins = <0 RK_PB5 RK_FUNC_GPIO &pcfg_pull_down>;
+ 		};
++
++		sata_err_led: sata-err-led {
++			rockchip,pins =
++				<2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_down>,
++				<2 RK_PA3 RK_FUNC_GPIO &pcfg_pull_down>,
++				<2 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>,
++				<2 RK_PA5 RK_FUNC_GPIO &pcfg_pull_down>,
++				<2 RK_PA6 RK_FUNC_GPIO &pcfg_pull_down>;
++		};
++	};
++
++	misc {
++		pca0_pins: pca0-pins {
++			rockchip,pins =
++				<0 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		wake_on_lan: wake-on-lan {
++			rockchip,pins =
++				<0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
+ 	};
+ 
+ 	pcie {
+@@ -506,6 +690,11 @@ &pwm1 {
+ 	status = "okay";
+ };
+ 
++&saradc {
++	vref-supply = <&vcc1v8_s3>;
++	status = "okay";
++};
++
+ &sdhci {
+ 	bus-width = <8>;
+ 	mmc-hs200-1_8v;
+@@ -589,17 +778,17 @@ hub@1 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 
+-			port@1 {
++			int_hub_port1: port@1 {
+ 				reg = <1>;
+ 				#trigger-source-cells = <0>;
+ 			};
+ 
+-			port@2 {
++			int_hub_port2: port@2 {
+ 				reg = <2>;
+ 				#trigger-source-cells = <0>;
+ 			};
+ 
+-			port@3 {
++			int_hub_port3: port@3 {
+ 				reg = <3>;
+ 				#trigger-source-cells = <0>;
+ 			};
